@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2>Users <span class="sub">local auth backend only</span></h2>
+  {% if note %}<div class="error">{{ note }}</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <table>
+    <thead><tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="mono">{{ r.username }}</td>
+        <td>
+          {% if r.role == 'admin' %}<span class="badge muted">admin</span>
+          {% else %}<span class="badge muted">user</span>{% endif %}
+          {% if r.username == sess.username %}<span class="badge muted">you</span>{% endif %}
+        </td>
+        <td class="mono">{{ r.created }}</td>
+        <td>
+          {% if r.username != sess.username %}
+          <form method="post" action="/users/{{ r.username }}/delete" class="inline"
+                onsubmit="return confirm('Delete user {{ r.username }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button type="submit" class="btn ghost sm">Delete</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="sub">No users.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Create a user</h2>
+  <form method="post" action="/users">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label for="u">Username</label>
+    <input type="text" id="u" name="username" required>
+    <label for="p">Password</label>
+    <input type="password" id="p" name="password" required>
+    <div class="row" style="margin-top:14px">
+      <button type="submit" class="btn">Create</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

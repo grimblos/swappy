@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="card">
+    <h1>Log in</h1>
+    <p class="hint">
+      {% if backend == "oauth" %}
+        You're about to be redirected to your OAuth provider.
+      {% else %}
+        Local authentication (argon2id).
+      {% endif %}
+    </p>
+    {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+    {% if no_users %}
+      <div class="error">
+        No users exist yet. Create one from the CLI:
+        <div class="mono" style="margin-top:8px">swappy auth user &lt;name&gt; --password &lt;pw&gt;</div>
+      </div>
+    {% endif %}
+    <form method="post" action="/login">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autofocus
+             {% if no_users %}disabled{% endif %}>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required
+             {% if no_users %}disabled{% endif %}>
+      <div style="margin-top:18px">
+        <button type="submit" class="btn" {% if no_users %}disabled{% endif %}>
+          {% if backend == "oauth" %}Continue with OAuth{% else %}Sign in{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

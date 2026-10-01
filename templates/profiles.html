@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Profiles{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="row">
+    <h2 style="margin:0">Profiles <span class="sub">{{ rows | length }} total</span></h2>
+    <span class="spacer"></span>
+    <a class="btn sm" href="/profiles/new">+ New profile</a>
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Model</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="{{ 'is-current' if r.name == current }}{% if r.name == default_profile %} is-default{% endif %}">
+        <td>
+          <a class="mono" href="/profiles/{{ r.name }}/edit">{{ r.name }}</a>
+          {% if r.name == default_profile %}<span class="badge muted">default</span>{% endif %}
+        </td>
+        <td class="mono">{{ r.model }}</td>
+        <td>
+          {% if r.exists == 'ok' %}<span class="badge ok">file present</span>
+          {% else %}<span class="badge err">file missing</span>{% endif %}
+        </td>
+        <td>
+          <div class="row">
+            <form method="post" action="/profiles/{{ r.name }}/default" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button type="submit" class="btn ghost sm">Set default</button>
+            </form>
+            <form method="post" action="/profiles/{{ r.name }}/delete" class="inline"
+                  onsubmit="return confirm('Delete profile {{ r.name }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button type="submit" class="btn ghost sm danger-text">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="sub">No profiles configured.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}swappy{% endblock %} · swappy</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a href="/dashboard">swappy</a></div>
+    <nav class="nav">
+      {% if sess %}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/profiles">Profiles</a>
+        <a href="/logs">Logs</a>
+        <a href="/users">Users</a>
+        <span class="nav-user">{{ sess.username }}</span>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit" class="btn ghost">Log out</button>
+        </form>
+      {% else %}
+        <a href="/login">Log in</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="content">
+    {% if flash %}
+      <div class="flash flash-{{ flash[1] }}">
+        <span>{{ flash[0] }}</span>
+        {% if flash[1] %}<button type="button" onclick="this.parentNode.remove()">×</button>{% endif %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <span>swappy · llama.cpp manager</span>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2>Server <span class="sub">llama.cpp @ 127.0.0.1:{{ port }}</span></h2>
+  <div class="kv">
+    <div class="k">Status</div>
+    <div class="v">
+      {% if running and healthy %}<span class="badge ok">running · healthy</span>
+      {% elif running %}<span class="badge warn">running · unhealthy</span>
+      {% else %}<span class="badge muted">stopped</span>{% endif %}
+    </div>
+    <div class="k">PID</div><div class="v mono">{{ pid or "—" }}</div>
+    <div class="k">Port</div><div class="v mono">{{ port }}</div>
+    <div class="k">Log</div><div class="v mono">{{ log_file }}</div>
+    <div class="k">Default profile</div><div class="v mono">{{ default_profile or "—" }}</div>
+  </div>
+</div>
+
+{% if pending %}
+<div class="card">
+  <h2>Pending switch <span class="sub">supervisor will execute this</span></h2>
+  <div class="kv">
+    <div class="k">Target profile</div><div class="v mono">{{ pending.profile }}</div>
+    <div class="k">Trigger</div><div class="v">{{ pending.when_str() }}</div>
+    <div class="k">Scheduled</div><div class="v mono">{{ pending_when }}</div>
+    {% if pending.reason %}<div class="k">Reason</div><div class="v">{{ pending.reason }}</div>{% endif %}
+  </div>
+  <div class="row" style="margin-top:14px">
+    <form method="post" action="/schedule/cancel" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="btn ghost sm">Cancel</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if running %}
+<div class="card">
+  <h2>Live metrics
+    <span class="sub">model: {{ model.get('path','?') }}</span>
+  </h2>
+  <div class="pill-group">
+    {% if model.get('name') %}<div class="pill"><div class="num">{{ model.get('name') }}</div><div class="lbl">model</div></div>{% endif %}
+    {% if model.get('size') %}<div class="pill"><div class="num">{{ model.get('size', 0) | int / 1048576.0 | round(1) }} MB</div><div class="lbl">size</div></div>{% endif %}
+    {% if model.get('n_ctx') %}<div class="pill"><div class="num">{{ model.get('n_ctx') }}</div><div class="lbl">context (configured)</div></div>{% endif %}
+    {% if model.get('n_vocab') %}<div class="pill"><div class="num">{{ model.get('n_vocab') }}</div><div class="lbl">vocab</div></div>{% endif %}
+  </div>
+
+  {% if timings %}
+  <div class="pill-group" style="margin-top:14px">
+    {% if timings.get('t_load_ms') is not none %}<div class="pill"><div class="num">{{ timings.get('t_load_ms') | round(1) }} ms</div><div class="lbl">model load</div></div>{% endif %}
+    {% if timings.get('t_prompt_ms') is not none %}
+      <div class="pill"><div class="num">{{ timings.get('t_prompt_ms') | round(0) }} ms</div><div class="lbl">prompt</div></div>
+    {% endif %}
+    {% if timings.get('t_generation_ms') is not none %}
+      <div class="pill"><div class="num">{{ timings.get('t_generation_ms') | round(0) }} ms</div><div class="lbl">generation</div></div>
+    {% endif %}
+    {% if timings.get('n_prompt') and timings.get('t_prompt_ms') %}
+      {% set pps = timings.get('n_prompt') / (timings.get('t_prompt_ms') / 1000.0) %}
+      <div class="pill"><div class="num">{{ pps | round(1) }}</div><div class="lbl">tokens/s (prompt)</div></div>
+    {% endif %}
+    {% if timings.get('n_generation') and timings.get('t_generation_ms') %}
+      {% set gps = timings.get('n_generation') / (timings.get('t_generation_ms') / 1000.0) %}
+      <div class="pill"><div class="num">{{ gps | round(1) }}</div><div class="lbl">tokens/s (generation)</div></div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if context %}
+  <h3 style="margin-top:18px;margin-bottom:8px">Context slots</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>tokens used</th><th>max</th><th>usage</th><th>state</th><th>user</th></tr>
+    </thead>
+    <tbody>
+    {% for s in context %}
+      {% set pct = (s.get('n_ctx_used',0) / (s.get('n_ctx') or 1) * 100) if s.get('n_ctx') else 0 %}
+      <tr>
+        <td class="mono">{{ s.get('id','?') }}</td>
+        <td class="mono">{{ s.get('n_ctx_used',0) }}</td>
+        <td class="mono">{{ s.get('n_ctx',0) }}</td>
+        <td>{{ pct | round(1) }}%</td>
+        <td>{% if s.get('state') == 'loaded' %}<span class="badge ok">loaded</span>
+            {% elif s.get('state') == 'processing' %}<span class="badge warn">processing</span>
+            {% else %}<span class="badge muted">{{ s.get('state','?') }}</span>{% endif %}</td>
+        <td class="mono">{{ s.get('user','—') or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% else %}
+<div class="card">
+  <h2>No server running</h2>
+  <p class="sub">Pick a profile and start it below, or schedule a delayed start.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Actions <span class="sub">immediate</span></h2>
+  <div class="row">
+    <form method="post" action="/actions/start" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <select name="profile">
+        {% for name in profiles.keys() %}
+          <option value="{{ name }}" {% if current_profile == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn">Start</button>
+    </form>
+
+    <form method="post" action="/actions/restart" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <select name="profile">
+        {% for name in profiles.keys() %}
+          <option value="{{ name }}" {% if current_profile == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn">Restart / swap</button>
+    </form>
+
+    <form method="post" action="/actions/stop" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="btn danger" {% if not running %}disabled{% endif %}>Stop</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Schedule a delayed or on-idle switch
+    <span class="sub">survives the current hermes session</span></h2>
+  <div class="row">
+    <label>Profile</label>
+    <select name="profile" id="sched-profile">
+      {% for name in profiles.keys() %}
+        <option value="{{ name }}" {% if current_profile == name %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <label>Delay (seconds)</label>
+    <input type="number" name="delay" id="sched-delay" min="0" step="1" value="300">
+    <label>Or at (HH:MM)</label>
+    <input type="text" name="at" id="sched-at" placeholder="23:30">
+    <label class="row" style="display:inline-flex;align-items:center;gap:6px">
+      <input type="checkbox" name="on_idle" id="sched-idle" style="width:auto"> Wait until idle
+    </label>
+    <label>Reason</label>
+    <input type="text" name="reason" id="sched-reason" placeholder="profile swap">
+  </div>
+  <div class="row" style="margin-top:14px">
+    <form method="post" action="/actions/switch" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="profile" value="{{ current_profile or default_profile }}">
+      <input type="hidden" name="delay" value="">
+      <input type="hidden" name="at" value="">
+      <input type="hidden" name="on_idle" value="">
+      <input type="hidden" name="reason" value="">
+      <button type="submit" class="btn sm" id="sched-submit">Schedule switch</button>
+    </form>
+    <span class="sub" id="sched-hint">Pick a delay, an absolute time, or “wait until idle”.</span>
+  </div>
+  <script>
+    (function () {
+      var submit = document.getElementById("sched-submit");
+      if (!submit) return;
+      var form = submit.closest("form");
+      var delay = document.getElementById("sched-delay");
+      var at = document.getElementById("sched-at");
+      var idle = document.getElementById("sched-idle");
+      var reason = document.getElementById("sched-reason");
+      var profile = document.getElementById("sched-profile");
+      submit.addEventListener("click", function (e) {
+        var d = delay && delay.value;
+        var a = at && at.value;
+        var i = idle && idle.checked;
+        if (!d && !a && !i) {
+          e.preventDefault();
+          document.getElementById("sched-hint").textContent =
+            "Pick a delay, an absolute time, or 'wait until idle'.";
+          return;
+        }
+        form.elements["profile"].value = profile.value;
+        form.elements["delay"].value = d || "";
+        form.elements["at"].value = a || "";
+        form.elements["on_idle"].value = i ? "on" : "";
+        form.elements["reason"].value = (reason && reason.value) || "";
+      });
+    })();
+  </script>
+</div>
+
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Logs{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="row">
+    <h2 style="margin:0">Server log <span class="sub">{{ log_file }}</span></h2>
+    <span class="spacer"></span>
+    <a class="btn sm ghost" href="/logs?n=50">Last 50</a>
+    <a class="btn sm ghost" href="/logs?n=100">Last 100</a>
+    <a class="btn sm ghost" href="/logs?n=500">Last 500</a>
+  </div>
+  <p class="sub" style="margin-top:10px">Showing last {{ n }} lines.</p>
+  <pre>{{ tail if tail else "(no log output yet)" }}</pre>
+</div>
+
+{% endblock %}

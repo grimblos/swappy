@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if mode == "edit" else "New" }} profile{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2>{{ "Edit" if mode == "edit" else "Create" }} profile: <span class="mono">{{ name or "&lt;name&gt;" }}</span></h2>
+  {% if errors %}<div class="error">{{ errors }}</div>{% endif %}
+
+  <form method="post"
+        action="{{ '/profiles' if mode == 'create' else '/profiles/' + name }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    {% if mode == "create" %}
+      <label for="name">Name (identifier, a–z, 0–9, - _)</label>
+      <input type="text" id="name" name="name" required value="{{ name }}">
+    {% endif %}
+
+    <label for="path">Model file (filename in the models dir, or absolute path)</label>
+    <input type="text" id="path" name="path" required
+           value="{{ fields.get('path','') }}">
+    <div class="field-hint">Relative paths resolve against the models directory.</div>
+
+    <div class="grid">
+      <div>
+        <label for="layers">Layers off CPU (-ngl, -1 = all off)</label>
+        <input type="text" id="layers" name="layers" value="{{ fields.get('layers','') }}">
+      </div>
+      <div>
+        <label for="context">Context (-c)</label>
+        <input type="text" id="context" name="context" value="{{ fields.get('context','') }}">
+      </div>
+      <div>
+        <label for="threads">Threads (-t)</label>
+        <input type="text" id="threads" name="threads" value="{{ fields.get('threads','') }}">
+      </div>
+      <div>
+        <label for="batch">Batch (-b)</label>
+        <input type="text" id="batch" name="batch" value="{{ fields.get('batch','') }}">
+      </div>
+      <div>
+        <label for="cache_k">Cache K (--cache-type-k)</label>
+        <input type="text" id="cache_k" name="cache_k" value="{{ fields.get('cache_k','') }}">
+      </div>
+      <div>
+        <label for="cache_v">Cache V (--cache-type-v)</label>
+        <input type="text" id="cache_v" name="cache_v" value="{{ fields.get('cache_v','') }}">
+      </div>
+      <div>
+        <label for="rope_scaling">RoPE scaling (--rope-scaling)</label>
+        <input type="text" id="rope_scaling" name="rope_scaling" value="{{ fields.get('rope_scaling','') }}">
+      </div>
+      <div>
+        <label for="rope_scale">RoPE scale (--rope-scale)</label>
+        <input type="text" id="rope_scale" name="rope_scale" value="{{ fields.get('rope_scale','') }}">
+      </div>
+      <div>
+        <label for="yarn_orig_ctx">YARN original ctx (--yarn-orig-ctx)</label>
+        <input type="text" id="yarn_orig_ctx" name="yarn_orig_ctx" value="{{ fields.get('yarn_orig_ctx','') }}">
+      </div>
+    </div>
+
+    <label for="extra_flags">Custom / extra flags (space-separated, any future llama.cpp flag)</label>
+    <textarea id="extra_flags" name="extra_flags">{{ fields.get('extra_flags','') }}</textarea>
+    <div class="field-hint">
+      Anything not in a named field above is stored and passed through verbatim,
+      so new llama.cpp flags can be added without code changes.
+    </div>
+
+    <div class="row" style="margin-top:18px">
+      <button type="submit" class="btn">{{ "Save changes" if mode == "edit" else "Create profile" }}</button>
+      <a class="btn ghost" href="/profiles">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
